@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard นักศึกษาระดับปริญญาเอก (กำลังศึกษาอยู่)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-alt: #f8fafc;
+      --primary: #1d4ed8;
+      --primary-dark: #1e3a8a;
+      --text: #0f172a;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --warning: #d97706;
+      --info: #2563eb;
+      --purple: #7c3aed;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Sarabun", "Segoe UI", Tahoma, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: #fff;
+      padding: 24px 28px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+    }
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.55rem;
+      font-weight: 700;
+    }
+    header p {
+      margin: 4px 0 0;
+      color: #dbeafe;
+      font-size: 0.95rem;
+    }
+    .top-link-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ffffff;
+      color: var(--primary-dark);
+      text-decoration: none;
+      font-weight: 700;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+      transition: transform 0.15s ease, background 0.15s ease;
+    }
+    .top-link-btn:hover {
+      background: #eff6ff;
+      transform: translateY(-1px);
+    }
+    .container {
+      max-width: 1280px;
+      margin: 24px auto 40px;
+      padding: 0 20px;
+    }
+    .toolbar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .filter-group label {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.93rem;
+    }
+    select {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    #majorSelect { min-width: 260px; }
+    #planSelect { min-width: 190px; }
+    select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(29, 78, 216, 0.15);
+    }
+    .reset-btn {
+      padding: 9px 14px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: var(--surface-alt);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .reset-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .detail-link-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 8px 14px;
+      border-radius: 10px;
+    }
+    .detail-link-box a {
+      color: var(--primary-dark);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .detail-link-box a:hover {
+      text-decoration: underline;
+    }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+    .tab-btn {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      padding: 9px 14px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      border-top: 4px solid var(--primary);
+    }
+    .kpi-card.green { border-top-color: var(--success); }
+    .kpi-card.blue { border-top-color: var(--info); }
+    .kpi-card.amber { border-top-color: var(--warning); }
+    .kpi-card.purple { border-top-color: var(--purple); }
+    .kpi-title {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.15;
+    }
+    .kpi-sub {
+      font-size: 0.84rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.15rem;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .panel-note {
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-weight: 400;
+    }
+    .chart-box {
+      position: relative;
+      height: 290px;
+      width: 100%;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.92rem;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    th {
+      background: var(--surface-alt);
+      font-weight: 700;
+      color: #334155;
+    }
+    th.num, td.num {
+      text-align: right;
+    }
+    tr.total-row td {
+      font-weight: 700;
+      background: #f8fafc;
+      border-top: 2px solid #cbd5e1;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-normal { background: #dcfce7; color: #166534; }
+    .badge-proposal { background: #fef3c7; color: #92400e; }
+    .badge-qual { background: #dbeafe; color: #1e40af; }
+    .badge-defense { background: #ede9fe; color: #5b21b6; }
+    .bar-wrap {
+      width: 100%;
+      background: #e2e8f0;
+      height: 8px;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .bar-fill {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 999px;
+    }
+    .footer-cta {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+    .cta-btn {
+      display: inline-block;
+      background: var(--primary);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 11px 20px;
+      border-radius: 10px;
+    }
+    .cta-btn:hover {
+      background: var(--primary-dark);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-inner">
+      <div>
+        <h1>📊 Dashboard นักศึกษาระดับปริญญาเอก (กำลังศึกษาอยู่)</h1>
+        <p>สรุปจำนวนนักศึกษาตามสถานะภาพ แยกตามสาขาวิชา แผนการเรียน และปีการศึกษาที่เข้ารับ</p>
+      </div>
+      <a class="top-link-btn" href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
+        📑 รายละเอียดข้อมูลทั้งหมด
+      </a>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="toolbar">
+      <div class="filter-controls">
+        <div class="filter-group">
+          <label for="majorSelect">สาขาวิชา:</label>
+          <select id="majorSelect" aria-label="เลือกดูสาขาวิชา">
+            <option value="ALL">หน้าแรก: ข้อมูลรวมทุกสาขา</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="planSelect">แผนการเรียน:</label>
+          <select id="planSelect" aria-label="กรองตามแผนการเรียน">
+            <option value="ALL">ทุกแผนการเรียน</option>
+          </select>
+        </div>
+        <button type="button" class="reset-btn" id="resetBtn">รีเซ็ตตัวกรอง</button>
+      </div>
+      <div class="detail-link-box">
+        <span>แหล่งข้อมูลต้นฉบับ:</span>
+        <a href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
+          รายละเอียดข้อมูลทั้งหมด
+        </a>
+      </div>
+    </div>
+
+    <div class="tabs" id="tabBar" role="tablist" aria-label="แท็บสาขาวิชา"></div>
+
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>
+          <span>กราฟจำนวนนักศึกษาแยกตามสถานะภาพ</span>
+          <span class="panel-note" id="statusChartNote"></span>
+        </h2>
+        <div class="chart-box">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <span id="secondaryChartTitle">กราฟสัดส่วนตามสาขาวิชา</span>
+          <span class="panel-note" id="secondaryChartNote"></span>
+        </h2>
+        <div class="chart-box">
+          <canvas id="secondaryChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>
+          <span>จำนวนนักศึกษาแยกตามสถานะภาพ</span>
+          <span class="panel-note" id="statusNote"></span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>สถานะภาพ</th>
+              <th class="num">จำนวน (คน)</th>
+              <th class="num">สัดส่วน</th>
+            </tr>
+          </thead>
+          <tbody id="statusTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>
+          <span>จำนวนนักศึกษาแยกตามปีการศึกษาที่เข้ารับ</span>
+          <span class="panel-note">เฉพาะผู้กำลังศึกษาอยู่</span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ปีการศึกษาที่เข้ารับ</th>
+              <th class="num">จำนวน (คน)</th>
+              <th class="num">สัดส่วน</th>
+            </tr>
+          </thead>
+          <tbody id="yearTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="majorComparisonPanel">
+      <h2>
+        <span>เปรียบเทียบจำนวนนักศึกษาที่กำลังศึกษาอยู่รายสาขา</span>
+        <span class="panel-note">แยกตามสถานะภาพ</span>
+      </h2>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>สาขาวิชา</th>
+              <th class="num">ปกติ</th>
+              <th class="num">ผ่านการสอบวัดคุณสมบัติ</th>
+              <th class="num">ผ่านการสอบโครงร่าง</th>
+              <th class="num">ผ่านการสอบดุษฎีนิพนธ์</th>
+              <th class="num">รวมกำลังศึกษาอยู่</th>
+            </tr>
+          </thead>
+          <tbody id="majorSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>
+        <span>รายชื่อนักศึกษาที่กำลังศึกษาอยู่</span>
+        <span class="panel-note" id="studentCountNote"></span>
+      </h2>
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ลำดับ</th>
+              <th>รหัสประจำตัวนักศึกษา</th>
+              <th>ชื่อ-นามสกุล</th>
+              <th>สาขาวิชา</th>
+              <th>ปีที่เข้ารับ</th>
+              <th>แผนการเรียน</th>
+              <th>สถานะภาพ</th>
+              <th>อาจารย์ที่ปรึกษา</th>
+              <th>อาจารย์ที่ปรึกษาร่วม</th>
+            </tr>
+          </thead>
+          <tbody id="studentListBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer-cta">
+      <div>
+        <strong>ต้องการดูข้อมูลทั้งหมด รวมถึงรายละเอียดอาจารย์ที่ปรึกษาและสถานะทั้งหมด?</strong>
+        <div style="color: var(--muted); font-size: 0.9rem;">คลิกปุ่มด้านขวาเพื่อเปิดไฟล์ Google Sheets ต้นฉบับ</div>
+      </div>
+      <a class="cta-btn" href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
+        รายละเอียดข้อมูลทั้งหมด
+      </a>
+    </div>
+  </div>
+
+  <script>
+    const MAJORS = [
+      "สาขาวิชาเคมีประยุกต์",
+      "สาขาวิชาเทคโนโลยีชีวภาพ",
+      "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม"
+    ];
+
+    const STATUS_ORDER = [
+      "ปกติ",
+      "ผ่านการสอบวัดคุณสมบัติ",
+      "ผ่านการสอบโครงร่าง",
+      "ผ่านการสอบดุษฎีนิพนธ์"
+    ];
+
+    function normalizePlan(plan) {
+      if (!plan) return "-";
+      return plan.trim().replace(/^แบบ\s*/u, "แผน ");
+    }
+
+    const RAW_STUDENTS = [
+      // สาขาวิชาเคมีประยุกต์
+      { major: "สาขาวิชาเคมีประยุกต์", id: "116680907001-2", name: "นางณภาดา คล่องเชิงสาน", year: 2566, status: "ปกติ", plan: "แผน 2.1", advisor: "รศ. ดร.ศิริวรรณ ตี้ภู่", coadvisor: "รศ. ดร.กนกอร เวชกรณ์" },
+      { major: "สาขาวิชาเคมีประยุกต์", id: "126780907001-8", name: "นางสาวนวลลออ ยามาโอะ", year: 2567, status: "ปกติ", plan: "แผน 2.1", advisor: "รศ. ดร.ฉัตรชัย พลเชี่ยว", coadvisor: "ดร.มติ ห่อประทุม" },
+
+      // สาขาวิชาเทคโนโลยีชีวภาพ
+      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116780908001-9", name: "นางสาวสิริธร ธีระเวทย์", year: 2567, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
+      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908002-5", name: "นางสาวธิดารัตน์ สำราญฤทธิ์", year: 2568, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
+      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908004-1", name: "นางสาวปุณณานันท์ พันธ์แก่น", year: 2568, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.ณัฐชยา คำรังษี", coadvisor: "ศ.ดร.วสกร บัลลังก์โพธิ์, รศ.ดร.วันชัย ปลื้มภาณุภัทร,ดร.สรฉัตร ธารมรรค" },
+      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908003-3", name: "นางสาวเกศินี กุหล้า", year: 2568, status: "ปกติ", plan: "แผน 2.1", advisor: "รองศาสตราจารย์ ดร.วันทนีย์ เขตต์กรณ์", coadvisor: "ผู้ช่วยศาสตราจารย์ ดร.สุทธวรรณ สุพรรณ" },
+      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116980908001-5", name: "นางสาวศศิธร ขุนทอง", year: 2569, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
+
+      // สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม
+      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "116780906001-1", name: "นางสาวฐานนันท์ เพชรคงทอง", year: 2567, status: "ปกติ", plan: "แบบ 1.1", advisor: "รศ.ดร.วรนุศย์ ทองพูล", coadvisor: "ศ.ดร.สันติ ภัยหลบลี้" },
+      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126780906001-9", name: "นางสาวเหนือตะวัน ธำรงสิริภาคย์", year: 2567, status: "ผ่านการสอบโครงร่าง", plan: "แบบ 2.1", advisor: "รศ.ดร.อทิพงศ์ บุตรชานนท์", coadvisor: "-" },
+      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126790906001-8", name: "Ms.Yinhui Hou", year: 2567, status: "ปกติ", plan: "แบบ 2.1", advisor: "ดร.จิรศักดิ์ สุกันธา", coadvisor: "ดร.กิตติคุณ โคตรมุงคุณ" },
+      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "116880906001-9", name: "นางสาวเกวลี นิลกำแหง", year: 2568, status: "ปกติ", plan: "แบบ 2.1", advisor: "รศ.ดร.วรนุศย์ ทองพูล", coadvisor: "-" },
+      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126980906001-5", name: "นางสาวกรรณกมล แสนสวาท", year: 2569, status: "ปกติ", plan: "แบบ 2.1", advisor: "รศ.ดร.ปรเมนทร์ พอใจ", coadvisor: "ผศ.ดร.จักรพันธ์ วัฒนวิกย์กรรม์" }
+    ];
+
+    const ACTIVE_STUDENTS = RAW_STUDENTS
+      .filter(s => s.status !== "สำเร็จการศึกษา" && s.status !== "พ้นสภาพการศึกษา")
+      .map(s => ({ ...s, normalizedPlan: normalizePlan(s.plan) }));
+
+    const majorSelect = document.getElementById("majorSelect");
+    const planSelect = document.getElementById("planSelect");
+    const resetBtn = document.getElementById("resetBtn");
+    const tabBar = document.getElementById("tabBar");
+
+    let statusChartInstance = null;
+    let secondaryChartInstance = null;
+
+    function initControls() {
+      MAJORS.forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        majorSelect.appendChild(opt);
+      });
+
+      const plans = [...new Set(ACTIVE_STUDENTS.map(s => s.normalizedPlan))].sort();
+      plans.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        planSelect.appendChild(opt);
+      });
+
+      const tabItems = [
+        { value: "ALL", label: "หน้าแรก: ข้อมูลรวมทุกสาขา" },
+        ...MAJORS.map(m => ({ value: m, label: m }))
+      ];
+      tabItems.forEach(t => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tab-btn" + (t.value === "ALL" ? " active" : "");
+        btn.dataset.value = t.value;
+        btn.textContent = t.label;
+        btn.addEventListener("click", () => {
+          majorSelect.value = t.value;
+          syncTabActive(t.value);
+          render();
+        });
+        tabBar.appendChild(btn);
+      });
+
+      majorSelect.addEventListener("change", () => {
+        syncTabActive(majorSelect.value);
+        render();
+      });
+
+      planSelect.addEventListener("change", () => render());
+
+      resetBtn.addEventListener("click", () => {
+        majorSelect.value = "ALL";
+        planSelect.value = "ALL";
+        syncTabActive("ALL");
+        render();
+      });
+    }
+
+    function syncTabActive(val) {
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.value === val);
+      });
+    }
+
+    function badgeClass(status) {
+      if (status === "ปกติ") return "badge badge-normal";
+      if (status === "ผ่านการสอบวัดคุณสมบัติ") return "badge badge-qual";
+      if (status === "ผ่านการสอบโครงร่าง") return "badge badge-proposal";
+      return "badge badge-defense";
+    }
+
+    function renderCharts(subset, selectedMajor, selectedPlan, countByStatus, yearMap) {
+      const statusCtx = document.getElementById("statusChart").getContext("2d");
+      if (statusChartInstance) statusChartInstance.destroy();
+
+      statusChartInstance = new Chart(statusCtx, {
+        type: "bar",
+        data: {
+          labels: STATUS_ORDER,
+          datasets: [{
+            label: "จำนวนนักศึกษา (คน)",
+            data: STATUS_ORDER.map(st => countByStatus[st] || 0),
+            backgroundColor: ["#16a34a", "#2563eb", "#f59e0b", "#7c3aed"],
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: 2, precision: 0 }
+            }
+          }
+        }
+      });
+
+      const secondaryCtx = document.getElementById("secondaryChart").getContext("2d");
+      if (secondaryChartInstance) secondaryChartInstance.destroy();
+
+      const titleEl = document.getElementById("secondaryChartTitle");
+      const noteEl = document.getElementById("secondaryChartNote");
+
+      if (selectedMajor === "ALL") {
+        titleEl.textContent = "กราฟจำนวนนักศึกษาแยกตามสาขาวิชา";
+        noteEl.textContent = selectedPlan === "ALL" ? "ทุกแผนการเรียน" : `แผน: ${selectedPlan}`;
+        secondaryChartInstance = new Chart(secondaryCtx, {
+          type: "bar",
+          data: {
+            labels: MAJORS.map(m => m.replace("สาขาวิชา", "")),
+            datasets: [{
+              label: "จำนวนนักศึกษา (คน)",
+              data: MAJORS.map(m => subset.filter(s => s.major === m).length),
+              backgroundColor: "#1d4ed8",
+              borderRadius: 8
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: { stepSize: 1, precision: 0 }
+              }
+            }
+          }
+        });
+      } else {
+        const years = Object.keys(yearMap).sort();
+        titleEl.textContent = "กราฟสัดส่วนตามปีการศึกษาที่เข้ารับ";
+        noteEl.textContent = selectedMajor;
+        secondaryChartInstance = new Chart(secondaryCtx, {
+          type: "doughnut",
+          data: {
+            labels: years.map(y => `ปี ${y}`),
+            datasets: [{
+              data: years.map(y => yearMap[y]),
+              backgroundColor: ["#1d4ed8", "#0ea5e9", "#16a34a", "#f59e0b", "#7c3aed"]
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { position: "bottom" }
+            }
+          }
+        });
+      }
+    }
+
+    function render() {
+      const selectedMajor = majorSelect.value;
+      const selectedPlan = planSelect.value;
+
+      const subset = ACTIVE_STUDENTS.filter(s => {
+        const matchMajor = selectedMajor === "ALL" || s.major === selectedMajor;
+        const matchPlan = selectedPlan === "ALL" || s.normalizedPlan === selectedPlan;
+        return matchMajor && matchPlan;
+      });
+
+      const total = subset.length;
+      const countByStatus = {};
+      STATUS_ORDER.forEach(st => { countByStatus[st] = 0; });
+      subset.forEach(s => {
+        countByStatus[s.status] = (countByStatus[s.status] || 0) + 1;
+      });
+
+      const scopeLabel = [
+        selectedMajor === "ALL" ? "ทุกสาขาวิชา" : selectedMajor,
+        selectedPlan === "ALL" ? "ทุกแผนการเรียน" : `แผน: ${selectedPlan}`
+      ].join(" • ");
+
+      document.getElementById("kpiGrid").innerHTML = `
+        <div class="kpi-card green">
+          <div class="kpi-title">กำลังศึกษาอยู่ทั้งหมด</div>
+          <div class="kpi-value">${total} คน</div>
+          <div class="kpi-sub">${scopeLabel}</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-title">สถานะปกติ</div>
+          <div class="kpi-value">${countByStatus["ปกติ"]} คน</div>
+          <div class="kpi-sub">${total ? ((countByStatus["ปกติ"] / total) * 100).toFixed(1) : "0.0"}% ของผู้กำลังศึกษา</div>
+        </div>
+        <div class="kpi-card amber">
+          <div class="kpi-title">ผ่านการสอบโครงร่าง</div>
+          <div class="kpi-value">${countByStatus["ผ่านการสอบโครงร่าง"]} คน</div>
+          <div class="kpi-sub">${total ? ((countByStatus["ผ่านการสอบโครงร่าง"] / total) * 100).toFixed(1) : "0.0"}% ของผู้กำลังศึกษา</div>
+        </div>
+        <div class="kpi-card purple">
+          <div class="kpi-title">สอบวัดคุณสมบัติ / ดุษฎีนิพนธ์</div>
+          <div class="kpi-value">${countByStatus["ผ่านการสอบวัดคุณสมบัติ"] + countByStatus["ผ่านการสอบดุษฎีนิพนธ์"]} คน</div>
+          <div class="kpi-sub">วัดคุณสมบัติ ${countByStatus["ผ่านการสอบวัดคุณสมบัติ"]} | ดุษฎีนิพนธ์ ${countByStatus["ผ่านการสอบดุษฎีนิพนธ์"]}</div>
+        </div>
+      `;
+
+      document.getElementById("statusNote").textContent = scopeLabel;
+      document.getElementById("statusChartNote").textContent = scopeLabel;
+      document.getElementById("statusTableBody").innerHTML = STATUS_ORDER.map(st => {
+        const cnt = countByStatus[st] || 0;
+        const pct = total ? ((cnt / total) * 100).toFixed(1) : "0.0";
+        return `
+          <tr>
+            <td>
+              <span class="${badgeClass(st)}">${st}</span>
+              <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>
+            </td>
+            <td class="num"><strong>${cnt}</strong></td>
+            <td class="num">${pct}%</td>
+          </tr>
+        `;
+      }).join("") + `
+        <tr class="total-row">
+          <td>รวมกำลังศึกษาอยู่</td>
+          <td class="num">${total}</td>
+          <td class="num">${total ? "100.0%" : "0.0%"}</td>
+        </tr>
+      `;
+
+      const yearMap = {};
+      subset.forEach(s => {
+        yearMap[s.year] = (yearMap[s.year] || 0) + 1;
+      });
+      const years = Object.keys(yearMap).sort();
+      document.getElementById("yearTableBody").innerHTML = years.map(yr => {
+        const cnt = yearMap[yr];
+        const pct = total ? ((cnt / total) * 100).toFixed(1) : "0.0";
+        return `
+          <tr>
+            <td>ปีการศึกษา ${yr}</td>
+            <td class="num"><strong>${cnt}</strong></td>
+            <td class="num">${pct}%</td>
+          </tr>
+        `;
+      }).join("") + `
+        <tr class="total-row">
+          <td>รวมทั้งหมด</td>
+          <td class="num">${total}</td>
+          <td class="num">${total ? "100.0%" : "0.0%"}</td>
+        </tr>
+      `;
+
+      const compPanel = document.getElementById("majorComparisonPanel");
+      compPanel.style.display = selectedMajor === "ALL" ? "block" : "none";
+      if (selectedMajor === "ALL") {
+        let sumNorm = 0, sumQual = 0, sumProp = 0, sumDef = 0, sumAll = 0;
+        document.getElementById("majorSummaryBody").innerHTML = MAJORS.map(m => {
+          const rows = subset.filter(s => s.major === m);
+          const norm = rows.filter(r => r.status === "ปกติ").length;
+          const qual = rows.filter(r => r.status === "ผ่านการสอบวัดคุณสมบัติ").length;
+          const prop = rows.filter(r => r.status === "ผ่านการสอบโครงร่าง").length;
+          const def = rows.filter(r => r.status === "ผ่านการสอบดุษฎีนิพนธ์").length;
+          const all = rows.length;
+          sumNorm += norm; sumQual += qual; sumProp += prop; sumDef += def; sumAll += all;
+          return `
+            <tr>
+              <td><strong>${m}</strong></td>
+              <td class="num">${norm}</td>
+              <td class="num">${qual}</td>
+              <td class="num">${prop}</td>
+              <td class="num">${def}</td>
+              <td class="num"><strong>${all}</strong></td>
+            </tr>
+          `;
+        }).join("") + `
+          <tr class="total-row">
+            <td>รวมทุกสาขา</td>
+            <td class="num">${sumNorm}</td>
+            <td class="num">${sumQual}</td>
+            <td class="num">${sumProp}</td>
+            <td class="num">${sumDef}</td>
+            <td class="num">${sumAll}</td>
+          </tr>
+        `;
+      }
+
+      document.getElementById("studentCountNote").textContent = `แสดง ${total} คน (${scopeLabel})`;
+      document.getElementById("studentListBody").innerHTML = subset.length
+        ? subset.map((s, idx) => `
+          <tr>
+            <td>${idx + 1}</td>
+            <td>${s.id}</td>
+            <td>${s.name}</td>
+            <td>${s.major}</td>
+            <td>${s.year}</td>
+            <td>${s.plan || "-"}</td>
+            <td><span class="${badgeClass(s.status)}">${s.status}</span></td>
+            <td>${s.advisor || "-"}</td>
+            <td>${s.coadvisor || "-"}</td>
+          </tr>
+        `).join("")
+        : `<tr><td colspan="9" style="text-align:center; color: var(--muted);">ไม่พบข้อมูลนักศึกษาตามเงื่อนไขที่เลือก</td></tr>`;
+
+      renderCharts(subset, selectedMajor, selectedPlan, countByStatus, yearMap);
+    }
+
+    initControls();
+    render();
+  </script>
+</body>
+</html>
