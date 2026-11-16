@@ -322,7 +322,7 @@
   <header>
     <div class="header-inner">
       <div>
-        <h1>📊 Dashboard นักศึกษาระดับปริญญาเอก (กำลังศึกษาอยู่)</h1>
+        <h1>📊 Dashboard นักศึกษาระดับปริญญาเอก คณะวิทยาศาสตร์และเทคโนโลยี RMUTT</h1>
         <p>สรุปจำนวนนักศึกษาตามสถานะภาพ แยกตามสาขาวิชา แผนการเรียน และปีการศึกษาที่เข้ารับ</p>
       </div>
       <a class="top-link-btn" href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
@@ -457,7 +457,6 @@
               <th>แผนการเรียน</th>
               <th>สถานะภาพ</th>
               <th>อาจารย์ที่ปรึกษา</th>
-              <th>อาจารย์ที่ปรึกษาร่วม</th>
             </tr>
           </thead>
           <tbody id="studentListBody"></tbody>
@@ -811,10 +810,9 @@
             <td>${s.plan || "-"}</td>
             <td><span class="${badgeClass(s.status)}">${s.status}</span></td>
             <td>${s.advisor || "-"}</td>
-            <td>${s.coadvisor || "-"}</td>
           </tr>
         `).join("")
-        : `<tr><td colspan="9" style="text-align:center; color: var(--muted);">ไม่พบข้อมูลนักศึกษาตามเงื่อนไขที่เลือก</td></tr>`;
+        : `<tr><td colspan="8" style="text-align:center; color: var(--muted);">ไม่พบข้อมูลนักศึกษาตามเงื่อนไขที่เลือก</td></tr>`;
 
       renderCharts(subset, selectedMajor, selectedPlan, countByStatus, yearMap);
     }
