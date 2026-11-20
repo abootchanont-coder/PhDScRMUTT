@@ -53,6 +53,12 @@
       color: #dbeafe;
       font-size: 0.95rem;
     }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
     .top-link-btn {
       display: inline-flex;
       align-items: center;
@@ -66,14 +72,62 @@
       font-size: 0.95rem;
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
       transition: transform 0.15s ease, background 0.15s ease;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
     }
     .top-link-btn:hover {
       background: #eff6ff;
       transform: translateY(-1px);
     }
+    .refresh-btn {
+      background: rgba(255, 255, 255, 0.16);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+    }
+    .refresh-btn:hover {
+      background: rgba(255, 255, 255, 0.28);
+    }
+    .sync-bar {
+      max-width: 1280px;
+      margin: 14px auto 0;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .sync-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--success);
+      display: inline-block;
+    }
+    .dot.loading { background: var(--warning); }
+    .dot.error { background: #dc2626; }
+    .error-banner {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      font-size: 0.92rem;
+    }
     .container {
       max-width: 1280px;
-      margin: 24px auto 40px;
+      margin: 14px auto 40px;
       padding: 0 20px;
     }
     .toolbar {
@@ -322,16 +376,29 @@
   <header>
     <div class="header-inner">
       <div>
-        <h1>📊 Dashboard นักศึกษาระดับปริญญาเอก คณะวิทยาศาสตร์และเทคโนโลยี RMUTT</h1>
-        <p>สรุปจำนวนนักศึกษาตามสถานะภาพ แยกตามสาขาวิชา แผนการเรียน และปีการศึกษาที่เข้ารับ</p>
+        <h1>📊 Dashboard นักศึกษาระดับปริญญาเอก คณะวิทยาศาสตร์และเทคโนโลยี มทร.ธัญบุรี</h1>
+        <p>เชื่อมต่อข้อมูลแบบ Real-time จาก Google Sheets แยกตามสาขาวิชา แผนการเรียน และปีการศึกษาที่เข้ารับ</p>
       </div>
-      <a class="top-link-btn" href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
-        📑 รายละเอียดข้อมูลทั้งหมด
-      </a>
+      <div class="header-actions">
+        <button type="button" class="top-link-btn refresh-btn" id="refreshBtn">🔄 ดึงข้อมูลล่าสุด</button>
+        <a class="top-link-btn" href="https://docs.google.com/spreadsheets/d/1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo/edit?gid=0#gid=0" target="_blank" rel="noopener noreferrer">
+          📑 รายละเอียดข้อมูลทั้งหมด
+        </a>
+      </div>
     </div>
   </header>
 
+  <div class="sync-bar">
+    <div class="sync-status">
+      <span class="dot loading" id="syncDot"></span>
+      <span id="syncText">กำลังโหลดข้อมูลล่าสุดจาก Google Sheets...</span>
+    </div>
+    <div>ซิงก์อัตโนมัติทุก 60 วินาที</div>
+  </div>
+
   <div class="container">
+    <div class="error-banner" id="errorBanner"></div>
+
     <div class="toolbar">
       <div class="filter-controls">
         <div class="filter-group">
@@ -476,6 +543,8 @@
   </div>
 
   <script>
+    const SHEET_ID = "1y3OlFwIQC1fFKkBoT-RXXcVgUTRfbtGEQNIppdIdeoo";
+
     const MAJORS = [
       "สาขาวิชาเคมีประยุกต์",
       "สาขาวิชาเทคโนโลยีชีวภาพ",
@@ -494,37 +563,168 @@
       return plan.trim().replace(/^แบบ\s*/u, "แผน ");
     }
 
-    const RAW_STUDENTS = [
-      // สาขาวิชาเคมีประยุกต์
-      { major: "สาขาวิชาเคมีประยุกต์", id: "116680907001-2", name: "นางณภาดา คล่องเชิงสาน", year: 2566, status: "ปกติ", plan: "แผน 2.1", advisor: "รศ. ดร.ศิริวรรณ ตี้ภู่", coadvisor: "รศ. ดร.กนกอร เวชกรณ์" },
-      { major: "สาขาวิชาเคมีประยุกต์", id: "126780907001-8", name: "นางสาวนวลลออ ยามาโอะ", year: 2567, status: "ปกติ", plan: "แผน 2.1", advisor: "รศ. ดร.ฉัตรชัย พลเชี่ยว", coadvisor: "ดร.มติ ห่อประทุม" },
-
-      // สาขาวิชาเทคโนโลยีชีวภาพ
-      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116780908001-9", name: "นางสาวสิริธร ธีระเวทย์", year: 2567, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
-      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908002-5", name: "นางสาวธิดารัตน์ สำราญฤทธิ์", year: 2568, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
-      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908004-1", name: "นางสาวปุณณานันท์ พันธ์แก่น", year: 2568, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.ณัฐชยา คำรังษี", coadvisor: "ศ.ดร.วสกร บัลลังก์โพธิ์, รศ.ดร.วันชัย ปลื้มภาณุภัทร,ดร.สรฉัตร ธารมรรค" },
-      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116880908003-3", name: "นางสาวเกศินี กุหล้า", year: 2568, status: "ปกติ", plan: "แผน 2.1", advisor: "รองศาสตราจารย์ ดร.วันทนีย์ เขตต์กรณ์", coadvisor: "ผู้ช่วยศาสตราจารย์ ดร.สุทธวรรณ สุพรรณ" },
-      { major: "สาขาวิชาเทคโนโลยีชีวภาพ", id: "116980908001-5", name: "นางสาวศศิธร ขุนทอง", year: 2569, status: "ปกติ", plan: "แผน 1.1", advisor: "รองศาสตราจารย์ ดร.อัษฎาวุธ อารีสิริสุข", coadvisor: "ดร. วิษณุ ศรีลา" },
-
-      // สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม
-      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "116780906001-1", name: "นางสาวฐานนันท์ เพชรคงทอง", year: 2567, status: "ปกติ", plan: "แบบ 1.1", advisor: "รศ.ดร.วรนุศย์ ทองพูล", coadvisor: "ศ.ดร.สันติ ภัยหลบลี้" },
-      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126780906001-9", name: "นางสาวเหนือตะวัน ธำรงสิริภาคย์", year: 2567, status: "ผ่านการสอบโครงร่าง", plan: "แบบ 2.1", advisor: "รศ.ดร.อทิพงศ์ บุตรชานนท์", coadvisor: "-" },
-      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126790906001-8", name: "Ms.Yinhui Hou", year: 2567, status: "ปกติ", plan: "แบบ 2.1", advisor: "ดร.จิรศักดิ์ สุกันธา", coadvisor: "ดร.กิตติคุณ โคตรมุงคุณ" },
-      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "116880906001-9", name: "นางสาวเกวลี นิลกำแหง", year: 2568, status: "ปกติ", plan: "แบบ 2.1", advisor: "รศ.ดร.วรนุศย์ ทองพูล", coadvisor: "-" },
-      { major: "สาขาวิชาเทคโนโลยีวัสดุและนวัตกรรม", id: "126980906001-5", name: "นางสาวกรรณกมล แสนสวาท", year: 2569, status: "ปกติ", plan: "แบบ 2.1", advisor: "รศ.ดร.ปรเมนทร์ พอใจ", coadvisor: "ผศ.ดร.จักรพันธ์ วัฒนวิกย์กรรม์" }
-    ];
-
-    const ACTIVE_STUDENTS = RAW_STUDENTS
-      .filter(s => s.status !== "สำเร็จการศึกษา" && s.status !== "พ้นสภาพการศึกษา")
-      .map(s => ({ ...s, normalizedPlan: normalizePlan(s.plan) }));
-
+    let ACTIVE_STUDENTS = [];
     const majorSelect = document.getElementById("majorSelect");
     const planSelect = document.getElementById("planSelect");
     const resetBtn = document.getElementById("resetBtn");
+    const refreshBtn = document.getElementById("refreshBtn");
     const tabBar = document.getElementById("tabBar");
+    const syncDot = document.getElementById("syncDot");
+    const syncText = document.getElementById("syncText");
+    const errorBanner = document.getElementById("errorBanner");
 
     let statusChartInstance = null;
     let secondaryChartInstance = null;
+
+    // Robust CSV parser supporting quoted commas & multiline cells
+    function parseCSV(text) {
+      const rows = [];
+      let row = [];
+      let cell = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+        if (inQuotes) {
+          if (ch === '"' && next === '"') {
+            cell += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            cell += ch;
+          }
+        } else {
+          if (ch === '"') {
+            inQuotes = true;
+          } else if (ch === ",") {
+            row.push(cell.trim());
+            cell = "";
+          } else if (ch === "\r" && next === "\n") {
+            row.push(cell.trim());
+            rows.push(row);
+            row = [];
+            cell = "";
+            i++;
+          } else if (ch === "\n" || ch === "\r") {
+            row.push(cell.trim());
+            rows.push(row);
+            row = [];
+            cell = "";
+          } else {
+            cell += ch;
+          }
+        }
+      }
+      if (cell.length > 0 || row.length > 0) {
+        row.push(cell.trim());
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    function findColIndex(headers, keywords, excludeKeywords = []) {
+      return headers.findIndex(h => {
+        const clean = h.replace(/\s+/g, "");
+        const matched = keywords.some(k => clean.includes(k));
+        const excluded = excludeKeywords.some(k => clean.includes(k));
+        return matched && !excluded;
+      });
+    }
+
+    async function fetchSheetData(sheetName) {
+      const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) throw new Error(`ไม่สามารถโหลดแท็บ "${sheetName}" ได้ (HTTP ${res.status})`);
+      const csvText = await res.text();
+      if (csvText.trim().startsWith("<!DOCTYPE html") || csvText.trim().startsWith("<html")) {
+        throw new Error(`ไม่สามารถอ่านข้อมูลจาก Google Sheets ได้ กรุณาตรวจสอบการตั้งค่าแชร์เป็น "ทุกคนที่มีลิงก์สามารถดูได้"`);
+      }
+      const rows = parseCSV(csvText);
+      if (rows.length < 2) return [];
+
+      // Find header row (contains รหัส or ชื่อ)
+      let headerIdx = rows.findIndex(r => r.some(c => c.includes("รหัส") || c.includes("ชื่อ")));
+      if (headerIdx === -1) headerIdx = 0;
+      const headers = rows[headerIdx];
+
+      const idxId = findColIndex(headers, ["รหัส"]);
+      const idxName = findColIndex(headers, ["ชื่อ"]);
+      const idxYear = findColIndex(headers, ["ปี"]);
+      const idxStatus = findColIndex(headers, ["สถานะ"]);
+      const idxPlan = findColIndex(headers, ["แผน"]);
+      const idxAdvisor = findColIndex(headers, ["ที่ปรึกษา"], ["ร่วม"]);
+
+      const records = [];
+      for (let i = headerIdx + 1; i < rows.length; i++) {
+        const r = rows[i];
+        const id = idxId >= 0 ? (r[idxId] || "") : "";
+        const name = idxName >= 0 ? (r[idxName] || "") : "";
+        if (!id && !name) continue;
+
+        const yearRaw = idxYear >= 0 ? (r[idxYear] || "") : "";
+        const yearMatch = yearRaw.match(/\d{4}/);
+        const year = yearMatch ? parseInt(yearMatch[0], 10) : yearRaw;
+
+        let status = idxStatus >= 0 ? (r[idxStatus] || "").trim() : "";
+        if (!status) status = "ปกติ";
+        if (status === "สำเร็จการศึกษา" || status === "พ้นสภาพการศึกษา") continue;
+
+        const plan = idxPlan >= 0 ? (r[idxPlan] || "-") : "-";
+        const advisor = idxAdvisor >= 0 ? (r[idxAdvisor] || "-") : "-";
+
+        records.push({
+          major: sheetName,
+          id: id || "-",
+          name: name || "-",
+          year: year || "-",
+          status: status,
+          plan: plan || "-",
+          normalizedPlan: normalizePlan(plan),
+          advisor: advisor || "-"
+        });
+      }
+      return records;
+    }
+
+    async function loadAllData() {
+      syncDot.className = "dot loading";
+      syncText.textContent = "กำลังซิงก์ข้อมูลล่าสุดจาก Google Sheets...";
+      errorBanner.style.display = "none";
+
+      try {
+        const results = await Promise.all(MAJORS.map(m => fetchSheetData(m)));
+        ACTIVE_STUDENTS = results.flat();
+        populatePlanOptions();
+        render();
+
+        const now = new Date().toLocaleTimeString("th-TH", { hour12: false });
+        syncDot.className = "dot";
+        syncText.textContent = `ซิงก์ข้อมูลล่าสุดเรียบร้อย (อัปเดตเมื่อ ${now} น.)`;
+      } catch (err) {
+        syncDot.className = "dot error";
+        syncText.textContent = "โหลดข้อมูลไม่สำเร็จ";
+        errorBanner.textContent = `เกิดข้อผิดพลาด: ${err.message}`;
+        errorBanner.style.display = "block";
+      }
+    }
+
+    function populatePlanOptions() {
+      const prevPlan = planSelect.value;
+      const plans = [...new Set(ACTIVE_STUDENTS.map(s => s.normalizedPlan))].filter(p => p && p !== "-").sort();
+      planSelect.innerHTML = '<option value="ALL">ทุกแผนการเรียน</option>';
+      plans.forEach(p => {
+        const opt = document.createElement("option");
+        opt.value = p;
+        opt.textContent = p;
+        planSelect.appendChild(opt);
+      });
+      if (plans.includes(prevPlan)) {
+        planSelect.value = prevPlan;
+      } else {
+        planSelect.value = "ALL";
+      }
+    }
 
     function initControls() {
       MAJORS.forEach(m => {
@@ -532,14 +732,6 @@
         opt.value = m;
         opt.textContent = m;
         majorSelect.appendChild(opt);
-      });
-
-      const plans = [...new Set(ACTIVE_STUDENTS.map(s => s.normalizedPlan))].sort();
-      plans.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p;
-        opt.textContent = p;
-        planSelect.appendChild(opt);
       });
 
       const tabItems = [
@@ -573,6 +765,8 @@
         syncTabActive("ALL");
         render();
       });
+
+      refreshBtn.addEventListener("click", () => loadAllData());
     }
 
     function syncTabActive(val) {
@@ -767,7 +961,7 @@
       const compPanel = document.getElementById("majorComparisonPanel");
       compPanel.style.display = selectedMajor === "ALL" ? "block" : "none";
       if (selectedMajor === "ALL") {
-        let sumNorm = 0, sumQual = 0, sumProp = 0, sumDef = 0, sumAll = 0;
+        let sum1 = 0, sum2 = 0, sum3 = 0, sum4 = 0, sumAll = 0;
         document.getElementById("majorSummaryBody").innerHTML = MAJORS.map(m => {
           const rows = subset.filter(s => s.major === m);
           const norm = rows.filter(r => r.status === "ปกติ").length;
@@ -775,7 +969,7 @@
           const prop = rows.filter(r => r.status === "ผ่านการสอบโครงร่าง").length;
           const def = rows.filter(r => r.status === "ผ่านการสอบดุษฎีนิพนธ์").length;
           const all = rows.length;
-          sumNorm += norm; sumQual += qual; sumProp += prop; sumDef += def; sumAll += all;
+          sum1 += norm; sum2 += qual; sum3 += prop; sum4 += def; sumAll += all;
           return `
             <tr>
               <td><strong>${m}</strong></td>
@@ -789,10 +983,10 @@
         }).join("") + `
           <tr class="total-row">
             <td>รวมทุกสาขา</td>
-            <td class="num">${sumNorm}</td>
-            <td class="num">${sumQual}</td>
-            <td class="num">${sumProp}</td>
-            <td class="num">${sumDef}</td>
+            <td class="num">${sum1}</td>
+            <td class="num">${sum2}</td>
+            <td class="num">${sum3}</td>
+            <td class="num">${sum4}</td>
             <td class="num">${sumAll}</td>
           </tr>
         `;
@@ -818,7 +1012,8 @@
     }
 
     initControls();
-    render();
+    loadAllData();
+    setInterval(loadAllData, 60000);
   </script>
 </body>
 </html>
